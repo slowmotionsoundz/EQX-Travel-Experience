@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "Registration": {
+      "title": "Registration",
+      "description": "A payment and travel registration",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "signatureData": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "totalAmount", "status", "createdAt", "updatedAt"]
+    },
+    "Traveler": {
+      "title": "Traveler",
+      "description": "A travel companion belonging to a registration",
+      "type": "object",
+      "properties": {
+        "registrationId": { "type": "string" },
+        "userId": { "type": "string", "description": "The user who owns the registration" },
+        "name": { "type": "string" },
+        "passport": { "type": "string" },
+        "role": { "type": "string" },
+        "dob": { "type": "string" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["registrationId", "userId", "name", "passport", "role", "dob", "address", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/registrations/{registrationId}": {
+      "schema": "Registration",
+      "description": "User's trip registrations"
+    },
+    "/registrations/{registrationId}/travelers/{travelerId}": {
+      "schema": "Traveler",
+      "description": "Travelers within a registration"
+    }
+  }
+}

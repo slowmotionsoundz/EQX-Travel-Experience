@@ -1,0 +1,567 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Card } from './components/ui/Card';
+import { Button } from './components/ui/Button';
+import { Input } from './components/ui/Input';
+import { Checkbox } from './components/ui/Checkbox';
+import { Plus, Trash2, ChevronRight, ChevronLeft, ShieldCheck, CreditCard, PenTool } from 'lucide-react';
+import { cn } from './lib/utils';
+import { SignaturePadCard } from './components/ui/SignaturePad';
+import { Onboarding } from './components/Onboarding';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+
+// Initialize Stripe (using a dummy key for the UI preview)
+const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
+
+const CheckoutForm = ({ amount, disabled, onSuccess, isSubmitting }: { amount: number, disabled: boolean, onSuccess: () => Promise<void>, isSubmitting: boolean }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState(false);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!stripe || !elements) return;
+
+    try {
+      await onSuccess();
+      setSuccess(true);
+    } catch (e: any) {
+      setError(e.message || "Failed to process.");
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="rounded-xl border border-[var(--color-accent)] bg-[var(--color-accent)]/10 p-6 text-center text-[var(--color-accent)]">
+        <ShieldCheck className="mx-auto mb-2 h-8 w-8" />
+        <h3 className="text-lg font-medium">Payment & Registration Successful</h3>
+        <p className="text-sm opacity-80">Your total of ${amount.toLocaleString()} has been processed and your travelers are registered.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="rounded-[12px] bg-[var(--color-surface-inset)] p-4 shadow-soft-pressed">
+        <CardElement 
+          options={{
+            style: {
+              base: {
+                fontSize: '14px',
+                color: '#2D3748',
+                '::placeholder': { color: '#718096' },
+                iconColor: '#718096'
+              },
+              invalid: { color: '#ef4444', iconColor: '#ef4444' }
+            }
+          }} 
+        />
+      </div>
+      {error && <div className="text-sm text-[#D32F2F]">{error}</div>}
+      <Button type="submit" disabled={!stripe || disabled || isSubmitting} className="w-full h-12 text-xs">
+        <CreditCard className="mr-2" size={16} /> {isSubmitting ? 'Processing...' : `Pay $${amount.toLocaleString()}.00`}
+      </Button>
+    </form>
+  );
+};
+
+
+type Traveler = {
+  id: string;
+  name: string;
+  passport: string;
+  dob: string;
+  address: string;
+  role: string;
+};
+
+const INITIAL_BASE_PRICE = 5500;
+const EXTRA_SEAT_PRICE = 1100;
+const DEPOSIT_PRICE = 1500;
+
+const BASE_TRAVELERS_COUNT = 5;
+
+const generateId = () => Math.random().toString(36).substr(2, 9);
+
+export default function App() {
+  const [user, setUser] = React.useState<any>(null);
+  const [authLoading, setAuthLoading] = React.useState(true);
+  const [view, setView] = React.useState<'onboarding' | 'registration'>('onboarding');
+  const [step, setStep] = React.useState(1);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    import('./lib/firebase').then(({ auth }) => {
+      import('firebase/auth').then(({ onAuthStateChanged }) => {
+        const unsub = onAuthStateChanged(auth, (u) => {
+          setUser(u);
+          setAuthLoading(false);
+          if (u && u.displayName) {
+             setTravelers(prev => {
+                const newT = [...prev];
+                if (!newT[0].name) newT[0].name = u.displayName || '';
+                return newT;
+             });
+          }
+        });
+        return unsub;
+      });
+    });
+  }, []);
+
+  const handleLogin = async () => {
+    try {
+      const { auth, googleProvider } = await import('./lib/firebase');
+      const { signInWithPopup } = await import('firebase/auth');
+      await signInWithPopup(auth, googleProvider);
+    } catch (e: any) {
+      alert("Login failed: " + e.message);
+    }
+  };
+
+  const [travelers, setTravelers] = React.useState<Traveler[]>(
+    Array.from({ length: 5 }).map(() => ({ id: generateId(), name: '', passport: '', dob: '', address: '', role: '' }))
+  );
+
+  const [agreement, setAgreement] = React.useState({
+    productionCredit: true,
+    writingMechanicals: true,
+    nonCompete: true,
+    travelInsurance: false,
+  });
+
+  const [signatureData, setSignatureData] = React.useState<string | null>(null);
+  const [payFull, setPayFull] = React.useState(false);
+
+  // Pricing calculation
+  const extraSeats = Math.max(0, travelers.length - BASE_TRAVELERS_COUNT);
+  const totalPrice = INITIAL_BASE_PRICE + (extraSeats * EXTRA_SEAT_PRICE);
+  const totalAmountDue = payFull ? totalPrice : DEPOSIT_PRICE;
+
+  const [validationError, setValidationError] = React.useState<string | null>(null);
+
+  const handleNext = () => {
+    if (step === 1) {
+      setValidationError(null);
+      for (const t of travelers) {
+        if (!t.name.trim() || !t.passport.trim() || !t.dob.trim() || !t.address.trim()) {
+          setValidationError("Please fill out all required fields (Name, Passport, Date of Birth, Home Address) for all travelers.");
+          return;
+        }
+        // Basic DOB validation MM/DD/YYYY or YYYY-MM-DD
+        const validDobFormat = /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/\d{4}$|^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+        if (!validDobFormat.test(t.dob.trim())) {
+          setValidationError(`Invalid Date of Birth format for ${t.name || 'a traveler'}. Please use MM/DD/YYYY or YYYY-MM-DD.`);
+          return;
+        }
+      }
+    }
+    setValidationError(null);
+    setStep(s => Math.min(4, s + 1));
+  };
+  const handlePrev = () => setStep(s => Math.max(1, s - 1));
+
+  const addTraveler = () => {
+    setTravelers([...travelers, { id: generateId(), name: '', passport: '', dob: '', address: '', role: '' }]);
+  };
+
+  const removeTraveler = (id: string) => {
+    if (travelers.length <= 1) return;
+    setTravelers(travelers.filter(t => t.id !== id));
+  };
+
+  const updateTraveler = (id: string, field: keyof Traveler, value: string) => {
+    setTravelers(travelers.map(t => t.id === id ? { ...t, [field]: value } : t));
+  };
+
+  const handleFinalSubmit = async () => {
+    if (!user) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const { db } = await import('./lib/firebase');
+      const { doc, setDoc, collection, serverTimestamp } = await import('firebase/firestore');
+      
+      const registrationId = generateId();
+      const regRef = doc(db, 'registrations', registrationId);
+      
+      await setDoc(regRef, {
+        userId: user.uid,
+        totalAmount: totalAmountDue,
+        status: 'pending',
+        signatureData: signatureData || '',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      const promises = travelers.map(t => {
+        const tRef = doc(collection(regRef, 'travelers'), t.id);
+        return setDoc(tRef, {
+          registrationId,
+          userId: user.uid,
+          name: t.name,
+          passport: t.passport,
+          dob: t.dob,
+          address: t.address,
+          role: t.role,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      });
+      
+      await Promise.all(promises);
+      // Here you would also proceed to real checkout if Stripe were active
+    } catch (error: any) {
+      console.error(error);
+      
+      const { handleFirestoreError, OperationType } = await import('./lib/firestoreError');
+      try {
+        handleFirestoreError(error, OperationType.WRITE, 'registrations');
+      } catch (err: any) {
+        setSubmitError("Failed to save to database: " + err.message);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-base)] text-[var(--color-text-primary)]">Loading session...</div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-base)] p-4">
+        <div className="max-w-md w-full bg-[var(--color-surface-inset)] p-8 rounded-[24px] shadow-soft-flat text-center">
+          <h1 className="text-2xl font-light tracking-tight text-[var(--color-text-primary)] mb-2">Nordic Sound Experience</h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-8">Please sign in to access the Joint Venture Portal</p>
+          <button 
+            onClick={handleLogin}
+            className="flex items-center justify-center w-full h-12 bg-[var(--color-accent)] text-white rounded-[12px] font-medium shadow-soft-raised hover:bg-opacity-90 transition-all"
+          >
+            Continue with Google
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex w-full max-w-5xl min-h-screen flex-col p-4 py-8 sm:p-6 lg:p-8">
+      
+      {/* Header */}
+        <div className="flex justify-between items-end border-b border-gray-300 pb-6 mb-8 text-left">
+        <div>
+          <h1 className="text-xs tracking-[0.4em] uppercase text-[var(--color-text-secondary)] font-semibold mb-1">Joint Venture Portal</h1>
+          <h2 className="text-3xl font-light tracking-tight text-[var(--color-text-primary)]">EQ Labs Europe <span className="text-[var(--color-text-secondary)] mx-2">/</span> Tycoon Vision</h2>
+        </div>
+      </div>
+
+      {view === 'onboarding' ? (
+        <Onboarding onStart={() => setView('registration')} />
+      ) : (
+      <div className="w-full">
+        
+        {/* Progress Bar (Stepper) */}
+        <div className="mb-8 flex items-center justify-center space-x-2 sm:space-x-4">
+          {[
+            { num: 1, label: 'Delegates' },
+            { num: 2, label: 'IP Rights' },
+            { num: 3, label: 'Signature' },
+            { num: 4, label: 'Payment' }
+          ].map((s) => (
+            <React.Fragment key={s.num}>
+              <div className="flex flex-col items-center">
+                <div className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-bold transition-all",
+                  step >= s.num ? "bg-[var(--color-accent)] text-white shadow-soft-raised" : "bg-[var(--color-surface-inset)] text-[var(--color-text-secondary)] shadow-soft-pressed"
+                )}>
+                  {s.num}
+                </div>
+                <span className="mt-2 hidden text-[9px] uppercase tracking-[0.1em] text-[var(--color-text-secondary)] sm:block">{s.label}</span>
+              </div>
+              {s.num < 4 && (
+                <div className="mb-5 h-[2px] w-8 bg-[var(--color-surface-inset)] shadow-soft-pressed sm:w-16" />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+
+        <Card className="min-h-[400px] overflow-hidden relative">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              {step === 1 && (
+                <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-gray-300 pb-4">
+                <div>
+                  <h2 className="text-xl font-light text-[var(--color-text-primary)]">Traveler Registration</h2>
+                  <p className="text-[11px] text-[var(--color-text-secondary)] mt-1 uppercase tracking-widest">Base package includes up to 5 seats.</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] text-[var(--color-text-secondary)] uppercase tracking-widest">Base Rate</div>
+                  <div className="text-lg font-mono text-[var(--color-text-primary)]">${INITIAL_BASE_PRICE}</div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {travelers.map((traveler, index) => (
+                  <div key={traveler.id} className="relative rounded-[16px] bg-[var(--color-surface-inset)] p-4 sm:p-6 shadow-soft-flat space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-secondary)]">Seat 0{index + 1} {index >= 5 && <span className="text-[var(--color-text-primary)]">(+$1,100)</span>}</span>
+                      {travelers.length > 1 && (
+                        <button onClick={() => removeTraveler(traveler.id)} className="text-[var(--color-text-secondary)] hover:text-red-500 transition-colors">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <Input 
+                        label={index === 0 ? "Full Name (From Auth)" : "Full Name"} 
+                        placeholder={index === 0 ? "Authenticating..." : "e.g. Jane Doe"} 
+                        value={traveler.name} 
+                        onChange={e => updateTraveler(traveler.id, 'name', e.target.value)}
+                        readOnly={index === 0}
+                        className={index === 0 ? "opacity-70 cursor-not-allowed" : ""}
+                      />
+                      <Input 
+                        label="Passport No." 
+                        placeholder="P-12345678" 
+                        value={traveler.passport} 
+                        onChange={e => updateTraveler(traveler.id, 'passport', e.target.value)} 
+                      />
+                      <div className="flex w-full flex-col space-y-1">
+                        <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Role/Title (Optional)</label>
+                        <select 
+                          className="flex h-11 w-full rounded-[12px] bg-[var(--color-surface-inset)] px-4 py-2 text-sm text-[var(--color-text-primary)] shadow-soft-pressed transition-all placeholder:text-[var(--color-text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] border-none"
+                          value={traveler.role}
+                          onChange={e => updateTraveler(traveler.id, 'role', e.target.value)}
+                        >
+                          <option value="">Select Role...</option>
+                          <option value="Artist">Artist (Primary)</option>
+                          <option value="Producer">Producer</option>
+                          <option value="Cameraman">Cameraman / Media</option>
+                          <option value="Family">Family Member</option>
+                          <option value="Host">Host / Coordination</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2 border-t border-[var(--color-bg-base)]">
+                      <Input 
+                        label="Date of Birth" 
+                        placeholder="MM/DD/YYYY" 
+                        value={traveler.dob} 
+                        onChange={e => updateTraveler(traveler.id, 'dob', e.target.value)} 
+                      />
+                      <Input 
+                        label="Home Address" 
+                        placeholder="123 Main St, City, Country" 
+                        value={traveler.address} 
+                        onChange={e => updateTraveler(traveler.id, 'address', e.target.value)} 
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Button onClick={addTraveler} variant="outline" className="w-full border-dashed text-[10px] uppercase tracking-widest">
+                <Plus size={16} className="mr-2" /> Manage Additional Seats
+              </Button>
+              {validationError && (
+                <div className="mt-4 p-3 bg-[#D32F2F]/10 border border-[#D32F2F]/20 text-[#D32F2F] text-sm rounded-[12px]">
+                  {validationError}
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-6">
+              <div className="border-b border-gray-300 pb-4">
+                <h2 className="text-xl font-light text-[var(--color-text-primary)]">Joint Venture Agreement</h2>
+                <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-1">IP Rights & Compliance</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-5 shadow-soft-flat">
+                  <div className="flex items-start space-x-4">
+                    <ShieldCheck className="text-[var(--color-accent)] mt-1 flex-shrink-0" size={16} />
+                    <div>
+                      <h4 className="text-[10px] font-bold uppercase text-[var(--color-text-secondary)]">Production Credit Split</h4>
+                      <p className="text-sm font-light text-[var(--color-text-primary)] mt-1 leading-relaxed">
+                        It is understood that all production credits associated with the joint venture will be split 50/50 between EQ Labs Europe and Tycoon Vision Media Group.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-5 shadow-soft-flat">
+                   <div className="flex items-start space-x-4">
+                    <PenTool className="text-[var(--color-accent)] mt-1 flex-shrink-0" size={16} />
+                    <div>
+                      <h4 className="text-[10px] font-bold uppercase text-[var(--color-text-secondary)]">Writing & Mechanicals</h4>
+                      <p className="text-sm font-light text-[var(--color-text-primary)] mt-1 leading-relaxed">
+                        Royalties generated from writing and mechanicals shall be distributed equally (50%) to both participating entities.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-5 shadow-soft-flat">
+                   <div className="flex items-start space-x-4">
+                    <ShieldCheck className="text-[var(--color-accent)] mt-1 flex-shrink-0" size={16} />
+                    <div>
+                      <h4 className="text-[11px] font-bold italic text-[var(--color-text-secondary)]">12-Month Non-Compete Clause</h4>
+                      <p className="text-xs text-[var(--color-text-primary)] mt-1 leading-relaxed">
+                        A non-compete clause extending 12 months post-project completion prevents direct competition in the specified European verticals.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-300 mt-6">
+                  <Checkbox 
+                    label="Mandatory Travel Insurance Confirmed" 
+                    checked={agreement.travelInsurance} 
+                    onChange={e => setAgreement({...agreement, travelInsurance: e.target.checked})} 
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-6">
+               <div className="border-b border-gray-300 pb-4">
+                <h2 className="text-xl font-light text-[var(--color-text-primary)]">Executive Authorization</h2>
+                <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-1">Tycoon Vision Media Group Sign-off</p>
+              </div>
+              
+              <div className="rounded-[16px] bg-[var(--color-surface-inset)] shadow-soft-pressed relative">
+                <div className="p-4">
+                  <SignaturePadCard 
+                    onSave={(data) => setSignatureData(data)} 
+                    onClear={() => setSignatureData(null)} 
+                  />
+                </div>
+                {!signatureData && <span className="absolute inset-0 flex items-center justify-center text-[10px] text-[var(--color-text-secondary)] uppercase tracking-widest italic pointer-events-none">Signature Pad</span>}
+                <div className="absolute bottom-2 left-4 text-[10px] text-[var(--color-text-secondary)] font-medium uppercase tracking-wider pointer-events-none">Authorized Executive</div>
+              </div>
+              <p className="text-[10px] text-[var(--color-text-secondary)] leading-relaxed text-center">
+                This draft needs to be reviewed by legal counsel before signing.
+              </p>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-8">
+              <div className="border-b border-gray-300 pb-4">
+                <h2 className="text-xl font-light text-[var(--color-text-primary)]">Payment & Finalization</h2>
+                <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-1">Select your payment preference</p>
+              </div>
+
+              {/* Invoice Breakdown */}
+              <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-6 space-y-4 shadow-soft-flat">
+                <div className={cn("flex justify-between text-xs", extraSeats === 0 && "border-b border-gray-300 pb-3")}>
+                  <span className="text-[var(--color-text-secondary)]">Base Fee</span>
+                  <span className="text-[var(--color-text-primary)]">${INITIAL_BASE_PRICE.toLocaleString()}.00</span>
+                </div>
+                {extraSeats > 0 && (
+                  <div className="flex justify-between text-xs border-b border-gray-300 pb-3">
+                    <span className="text-[var(--color-text-secondary)]">Extra Seats ({extraSeats})</span>
+                    <span className="text-[var(--color-text-primary)]">${(extraSeats * EXTRA_SEAT_PRICE).toLocaleString()}.00</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-end pt-2">
+                  <span className="text-[10px] uppercase text-[var(--color-text-secondary)] font-bold">Total Amount</span>
+                  <span className="text-2xl font-light text-[var(--color-text-primary)] font-mono">${totalPrice.toLocaleString()}.00</span>
+                </div>
+              </div>
+
+              <div className="text-[10px] text-[#D32F2F] bg-[#D32F2F]/10 rounded-[8px] p-3 mx-1">
+                <strong>Important:</strong> This base rate is calculated using current international flight pricing. Taking too long to secure payment may result in an increased total as flight prices rise prior to departure.
+              </div>
+
+              {/* Payment Options */}
+              <div className="flex gap-2 flex-col sm:flex-row">
+                <button 
+                  onClick={() => setPayFull(true)}
+                  className={cn(
+                    "flex-1 text-[11px] font-bold uppercase py-3 tracking-widest transition-all rounded-[12px]",
+                    payFull ? "bg-[var(--color-accent)] text-white shadow-soft-raised border-none" : "bg-[var(--color-surface-inset)] text-[var(--color-text-secondary)] shadow-soft-pressed hover:text-[var(--color-text-primary)]"
+                  )}
+                >
+                  Pay Full Amount
+                </button>
+                <button 
+                  onClick={() => setPayFull(false)}
+                  className={cn(
+                    "flex-1 text-[11px] font-bold uppercase py-3 tracking-widest transition-all rounded-[12px]",
+                    !payFull ? "bg-[var(--color-accent)] text-white shadow-soft-raised border-none" : "bg-[var(--color-surface-inset)] text-[var(--color-text-secondary)] shadow-soft-pressed hover:text-[var(--color-text-primary)]"
+                  )}
+                >
+                  Deposit $1,500
+                </button>
+              </div>
+
+              {/* Payment Component */}
+              <div className="pt-2">
+                <Elements stripe={stripePromise}>
+                  <CheckoutForm 
+                    amount={totalAmountDue} 
+                    disabled={!agreement.travelInsurance || !signatureData} 
+                    onSuccess={handleFinalSubmit}
+                    isSubmitting={isSubmitting} 
+                  />
+                </Elements>
+                {submitError && <div className="text-[#D32F2F] text-sm mt-2">{submitError}</div>}
+                <div className="flex justify-center space-x-4 pt-6 opacity-50">
+                  <span className="text-[9px] tracking-widest uppercase">Stripe Secure</span>
+                  <span className="text-[9px] tracking-widest uppercase">Google Pay</span>
+                </div>
+              </div>
+            </div>
+          )}
+            </motion.div>
+          </AnimatePresence>
+        </Card>
+
+        {/* Navigation Buttons */}
+        <div className="mt-8 flex justify-between">
+          <Button 
+            variant="secondary" 
+            onClick={handlePrev} 
+            disabled={step === 1}
+            className={step === 1 ? 'invisible' : ''}
+          >
+            <ChevronLeft size={16} className="mr-1" /> Back
+          </Button>
+          
+          {step < 4 && (
+            <Button onClick={handleNext} disabled={(step === 2 && !agreement.travelInsurance) || (step === 3 && !signatureData)}>
+              Next Step <ChevronRight size={16} className="ml-1" />
+            </Button>
+          )}
+        </div>
+
+        <footer className="mt-12 flex justify-between items-center text-[10px] tracking-widest text-[var(--color-text-secondary)] opacity-70 border-t border-gray-300 pt-6 flex-col gap-2 sm:flex-row">
+          <span>REF: EQ-TV-2024-089</span>
+          <span className="uppercase text-center">Equipping Visionaries Across the Continent</span>
+          <span>v1.0.5 - NEUMORPHIC</span>
+        </footer>
+
+      </div>
+      )}
+    </div>
+  );
+}
