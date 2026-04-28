@@ -8,62 +8,91 @@ import { Plus, Trash2, ChevronRight, ChevronLeft, ShieldCheck, CreditCard, PenTo
 import { cn } from './lib/utils';
 import { SignaturePadCard } from './components/ui/SignaturePad';
 import { Onboarding } from './components/Onboarding';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
+import { DatePicker } from './components/ui/DatePicker';
+// Removed react-stripe-js imports
+// import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+// import { loadStripe } from '@stripe/stripe-js';
 
-// Initialize Stripe (using a dummy key for the UI preview)
-const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
-
-const CheckoutForm = ({ amount, disabled, onSuccess, isSubmitting }: { amount: number, disabled: boolean, onSuccess: () => Promise<void>, isSubmitting: boolean }) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState(false);
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!stripe || !elements) return;
-
-    try {
-      await onSuccess();
-      setSuccess(true);
-    } catch (e: any) {
-      setError(e.message || "Failed to process.");
-    }
-  };
-
-  if (success) {
-    return (
-      <div className="rounded-xl border border-[var(--color-accent)] bg-[var(--color-accent)]/10 p-6 text-center text-[var(--color-accent)]">
-        <ShieldCheck className="mx-auto mb-2 h-8 w-8" />
-        <h3 className="text-lg font-medium">Payment & Registration Successful</h3>
-        <p className="text-sm opacity-80">Your total of ${amount.toLocaleString()} has been processed and your travelers are registered.</p>
-      </div>
-    );
+// Define the window.Stripe type locally
+declare global {
+  interface Window {
+    Stripe?: any;
   }
+}
+
+const PaymentModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+  const [processingState, setProcessingState] = React.useState<'idle' | 'processing' | 'confirmed'>('idle');
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      setProcessingState('idle');
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="rounded-[12px] bg-[var(--color-surface-inset)] p-4 shadow-soft-pressed">
-        <CardElement 
-          options={{
-            style: {
-              base: {
-                fontSize: '14px',
-                color: '#2D3748',
-                '::placeholder': { color: '#718096' },
-                iconColor: '#718096'
-              },
-              invalid: { color: '#ef4444', iconColor: '#ef4444' }
-            }
-          }} 
-        />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+      <div className="relative w-full max-w-md overflow-hidden rounded-[24px] bg-[var(--color-bg-base)] p-8 shadow-2xl">
+        <button 
+          onClick={onClose} 
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-surface-inset)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] shadow-soft-raised transition-colors"
+        >
+          X
+        </button>
+        
+        {processingState === 'idle' ? (
+          <>
+            <div className="mb-8 mt-2 text-center">
+              <h2 className="text-2xl font-light text-[var(--color-text-primary)]">Complete Your Registration</h2>
+              <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-2">Secure your spot — Nordic Sound Experience</p>
+            </div>
+            
+            <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-6 mb-8 text-center shadow-soft-pressed">
+              <p className="text-sm text-[var(--color-text-secondary)] uppercase tracking-widest mb-1">Total Due Now</p>
+              <p className="text-3xl font-semibold text-[var(--color-accent)]">€3,500 <span className="text-sm font-normal text-[var(--color-text-secondary)]">deposit</span></p>
+            </div>
+
+            <a 
+              href="https://buy.stripe.com/cNi4gyfV01Bx9qPckleME00"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {
+                setProcessingState('processing');
+                setTimeout(() => setProcessingState('confirmed'), 8000);
+              }}
+              className="w-full flex justify-center items-center h-14 rounded-[12px] bg-[var(--color-accent)] text-sm font-bold tracking-wider text-white shadow-soft-raised transition-all hover:bg-opacity-90"
+            >
+              PAY NOW
+            </a>
+          </>
+        ) : processingState === 'processing' ? (
+          <div className="py-12 flex flex-col items-center justify-center text-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--color-surface-inset)] border-t-[var(--color-accent)] mb-6"></div>
+            <h2 className="text-xl font-light text-[var(--color-text-primary)]">Awaiting Payment...</h2>
+            <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-3 max-w-[250px] leading-relaxed">
+              Please complete the transaction in the secure Stripe tab that just opened.
+            </p>
+          </div>
+        ) : (
+           <div className="py-10 flex flex-col items-center justify-center text-center">
+            <div className="h-16 w-16 bg-[var(--color-accent)]/20 text-[var(--color-accent)] rounded-full flex items-center justify-center mb-6">
+              <ShieldCheck size={32} />
+            </div>
+            <h2 className="text-xl font-light text-[var(--color-text-primary)]">Registration Complete</h2>
+            <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-3 leading-relaxed">
+              We've received your data. Once Stripe verifies the payment, you will receive an email receipt.
+            </p>
+            <button 
+              onClick={onClose}
+              className="mt-8 px-8 flex justify-center items-center h-12 rounded-[12px] bg-[var(--color-surface-inset)] text-[11px] font-bold tracking-widest uppercase text-[var(--color-text-primary)] shadow-soft-raised transition-all hover:shadow-soft-pressed"
+            >
+              CLOSE WINDOW
+            </button>
+          </div>
+        )}
       </div>
-      {error && <div className="text-sm text-[#D32F2F]">{error}</div>}
-      <Button type="submit" disabled={!stripe || disabled || isSubmitting} className="w-full h-12 text-xs">
-        <CreditCard className="mr-2" size={16} /> {isSubmitting ? 'Processing...' : `Pay $${amount.toLocaleString()}.00`}
-      </Button>
-    </form>
+    </div>
   );
 };
 
@@ -72,6 +101,7 @@ type Traveler = {
   id: string;
   name: string;
   passport: string;
+  passportExpiry: string;
   dob: string;
   address: string;
   role: string;
@@ -79,7 +109,7 @@ type Traveler = {
 
 const INITIAL_BASE_PRICE = 5500;
 const EXTRA_SEAT_PRICE = 1100;
-const DEPOSIT_PRICE = 1500;
+const DEPOSIT_PRICE = 3500;
 
 const BASE_TRAVELERS_COUNT = 5;
 
@@ -99,12 +129,33 @@ export default function App() {
         const unsub = onAuthStateChanged(auth, (u) => {
           setUser(u);
           setAuthLoading(false);
-          if (u && u.displayName) {
-             setTravelers(prev => {
-                const newT = [...prev];
-                if (!newT[0].name) newT[0].name = u.displayName || '';
-                return newT;
-             });
+          if (u) {
+            const savedState = localStorage.getItem(`registration_progress_${u.uid}`);
+            if (savedState) {
+              try {
+                const parsed = JSON.parse(savedState);
+                if (parsed.travelers) setTravelers(parsed.travelers);
+                if (parsed.agreement) setAgreement(parsed.agreement);
+                if (parsed.signatureData) setSignatureData(parsed.signatureData);
+                if (parsed.step) setStep(parsed.step);
+                if (parsed.payFull !== undefined) setPayFull(parsed.payFull);
+              } catch (e) {
+                console.error("Failed to parse saved progress", e);
+                if (u.displayName) {
+                  setTravelers(prev => {
+                     const newT = [...prev];
+                     if (!newT[0].name) newT[0].name = u.displayName || '';
+                     return newT;
+                  });
+                }
+              }
+            } else if (u.displayName) {
+              setTravelers(prev => {
+                 const newT = [...prev];
+                 if (!newT[0].name) newT[0].name = u.displayName || '';
+                 return newT;
+              });
+            }
           }
         });
         return unsub;
@@ -123,7 +174,7 @@ export default function App() {
   };
 
   const [travelers, setTravelers] = React.useState<Traveler[]>(
-    Array.from({ length: 5 }).map(() => ({ id: generateId(), name: '', passport: '', dob: '', address: '', role: '' }))
+    Array.from({ length: 5 }).map(() => ({ id: generateId(), name: '', passport: '', passportExpiry: '', dob: '', address: '', role: '' }))
   );
 
   const [agreement, setAgreement] = React.useState({
@@ -135,37 +186,56 @@ export default function App() {
 
   const [signatureData, setSignatureData] = React.useState<string | null>(null);
   const [payFull, setPayFull] = React.useState(false);
+  const [showPaymentModal, setShowPaymentModal] = React.useState(false);
+
+  // Save progress to local storage when state changes
+  React.useEffect(() => {
+    if (user && !authLoading) {
+      const stateToSave = {
+        travelers,
+        agreement,
+        signatureData,
+        step,
+        payFull
+      };
+      localStorage.setItem(`registration_progress_${user.uid}`, JSON.stringify(stateToSave));
+    }
+  }, [user, authLoading, travelers, agreement, signatureData, step, payFull]);
 
   // Pricing calculation
   const extraSeats = Math.max(0, travelers.length - BASE_TRAVELERS_COUNT);
   const totalPrice = INITIAL_BASE_PRICE + (extraSeats * EXTRA_SEAT_PRICE);
   const totalAmountDue = payFull ? totalPrice : DEPOSIT_PRICE;
 
-  const [validationError, setValidationError] = React.useState<string | null>(null);
-
-  const handleNext = () => {
-    if (step === 1) {
-      setValidationError(null);
-      for (const t of travelers) {
-        if (!t.name.trim() || !t.passport.trim() || !t.dob.trim() || !t.address.trim()) {
-          setValidationError("Please fill out all required fields (Name, Passport, Date of Birth, Home Address) for all travelers.");
-          return;
-        }
-        // Basic DOB validation MM/DD/YYYY or YYYY-MM-DD
-        const validDobFormat = /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/\d{4}$|^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
-        if (!validDobFormat.test(t.dob.trim())) {
-          setValidationError(`Invalid Date of Birth format for ${t.name || 'a traveler'}. Please use MM/DD/YYYY or YYYY-MM-DD.`);
-          return;
-        }
+  const validateForm = () => {
+    for (const t of travelers) {
+      if (!t.name.trim() || !t.passport.trim() || !t.dob.trim() || !t.address.trim()) {
+        return "Please complete all required fields for travelers in Step 1.";
+      }
+      const validDobFormat = /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/\d{4}$|^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+      if (!validDobFormat.test(t.dob.trim())) {
+        return `Please provide a valid Date of Birth for ${t.name || 'a traveler'} in Step 1.`;
+      }
+      if (t.passportExpiry && !validDobFormat.test(t.passportExpiry.trim())) {
+        return `Please provide a valid Passport Expiry for ${t.name || 'a traveler'} in Step 1.`;
       }
     }
-    setValidationError(null);
-    setStep(s => Math.min(4, s + 1));
+    if (!agreement.travelInsurance) {
+        return "Please confirm Travel Insurance in Step 2.";
+    }
+    if (!signatureData) {
+        return "Please provide an Authorized Executive signature in Step 3.";
+    }
+    return null;
   };
+
+  const validationError = validateForm();
+
+  const handleNext = () => setStep(s => Math.min(4, s + 1));
   const handlePrev = () => setStep(s => Math.max(1, s - 1));
 
   const addTraveler = () => {
-    setTravelers([...travelers, { id: generateId(), name: '', passport: '', dob: '', address: '', role: '' }]);
+    setTravelers([...travelers, { id: generateId(), name: '', passport: '', passportExpiry: '', dob: '', address: '', role: '' }]);
   };
 
   const removeTraveler = (id: string) => {
@@ -204,6 +274,7 @@ export default function App() {
           userId: user.uid,
           name: t.name,
           passport: t.passport,
+          passportExpiry: t.passportExpiry,
           dob: t.dob,
           address: t.address,
           role: t.role,
@@ -213,7 +284,9 @@ export default function App() {
       });
       
       await Promise.all(promises);
-      // Here you would also proceed to real checkout if Stripe were active
+      
+      // Clear saved progress on successful submission
+      localStorage.removeItem(`registration_progress_${user.uid}`);
     } catch (error: any) {
       console.error(error);
       
@@ -222,6 +295,7 @@ export default function App() {
         handleFirestoreError(error, OperationType.WRITE, 'registrations');
       } catch (err: any) {
         setSubmitError("Failed to save to database: " + err.message);
+        throw err; // throw so we don't open the modal if we fail to save
       }
     } finally {
       setIsSubmitting(false);
@@ -342,7 +416,7 @@ export default function App() {
                       <div className="flex w-full flex-col space-y-1">
                         <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Role/Title (Optional)</label>
                         <select 
-                          className="flex h-11 w-full rounded-[12px] bg-[var(--color-surface-inset)] px-4 py-2 text-sm text-[var(--color-text-primary)] shadow-soft-pressed transition-all placeholder:text-[var(--color-text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] border-none"
+                          className="flex h-11 w-full rounded-[12px] bg-[var(--color-surface-inset)] px-4 py-2 text-base sm:text-sm text-[var(--color-text-primary)] shadow-soft-pressed transition-all placeholder:text-[var(--color-text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] border-none"
                           value={traveler.role}
                           onChange={e => updateTraveler(traveler.id, 'role', e.target.value)}
                         >
@@ -356,12 +430,16 @@ export default function App() {
                         </select>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2 border-t border-[var(--color-bg-base)]">
-                      <Input 
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 pt-2 border-t border-[var(--color-bg-base)]">
+                      <DatePicker 
+                        label="Passport Expiry (Optional)" 
+                        date={traveler.passportExpiry} 
+                        setDate={(date) => updateTraveler(traveler.id, 'passportExpiry', date)} 
+                      />
+                      <DatePicker 
                         label="Date of Birth" 
-                        placeholder="MM/DD/YYYY" 
-                        value={traveler.dob} 
-                        onChange={e => updateTraveler(traveler.id, 'dob', e.target.value)} 
+                        date={traveler.dob} 
+                        setDate={(date) => updateTraveler(traveler.id, 'dob', date)} 
                       />
                       <Input 
                         label="Home Address" 
@@ -377,11 +455,6 @@ export default function App() {
               <Button onClick={addTraveler} variant="outline" className="w-full border-dashed text-[10px] uppercase tracking-widest">
                 <Plus size={16} className="mr-2" /> Manage Additional Seats
               </Button>
-              {validationError && (
-                <div className="mt-4 p-3 bg-[#D32F2F]/10 border border-[#D32F2F]/20 text-[#D32F2F] text-sm rounded-[12px]">
-                  {validationError}
-                </div>
-              )}
             </div>
           )}
 
@@ -488,8 +561,9 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="text-[10px] text-[#D32F2F] bg-[#D32F2F]/10 rounded-[8px] p-3 mx-1">
-                <strong>Important:</strong> This base rate is calculated using current international flight pricing. Taking too long to secure payment may result in an increased total as flight prices rise prior to departure.
+              <div className="text-[10px] text-[var(--color-text-secondary)] bg-[var(--color-surface-inset)] rounded-[8px] p-3 mx-1 space-y-2">
+                <p><span className="text-[#D32F2F] font-bold">Important:</span> This base rate is calculated using current international flight pricing. Taking too long to secure payment may result in an increased total as flight prices rise prior to departure.</p>
+                <p><strong className="text-[var(--color-text-primary)]">Baggage Charges:</strong> Please be advised that baggage will incur extra charges according to the individual airline policies. These are not included in the base fee.</p>
               </div>
 
               {/* Payment Options */}
@@ -510,24 +584,33 @@ export default function App() {
                     !payFull ? "bg-[var(--color-accent)] text-white shadow-soft-raised border-none" : "bg-[var(--color-surface-inset)] text-[var(--color-text-secondary)] shadow-soft-pressed hover:text-[var(--color-text-primary)]"
                   )}
                 >
-                  Deposit $1,500
+                  Deposit ${DEPOSIT_PRICE.toLocaleString()}
                 </button>
               </div>
 
               {/* Payment Component */}
               <div className="pt-2">
-                <Elements stripe={stripePromise}>
-                  <CheckoutForm 
-                    amount={totalAmountDue} 
-                    disabled={!agreement.travelInsurance || !signatureData} 
-                    onSuccess={handleFinalSubmit}
-                    isSubmitting={isSubmitting} 
-                  />
-                </Elements>
-                {submitError && <div className="text-[#D32F2F] text-sm mt-2">{submitError}</div>}
+                {validationError && (
+                  <div className="mb-4 p-3 bg-[#D32F2F]/10 border border-[#D32F2F]/20 text-[#D32F2F] text-sm rounded-[12px]">
+                    <span className="font-bold mb-1 uppercase tracking-widest text-[9px]">Action Required</span>
+                    <p className="mt-1">{validationError}</p>
+                  </div>
+                )}
+                
+                <button 
+                  onClick={() => {
+                    handleFinalSubmit().then(() => setShowPaymentModal(true)).catch(() => {});
+                  }}
+                  disabled={!!validationError || isSubmitting}
+                  className="w-full flex justify-center items-center h-12 rounded-[12px] bg-[var(--color-accent)] text-[11px] font-bold tracking-widest uppercase text-white shadow-soft-raised transition-all hover:bg-opacity-90 disabled:opacity-50"
+                >
+                  <CreditCard className="mr-2" size={16} /> {isSubmitting ? 'Processing...' : 'Complete Registration'}
+                </button>
+                
+                {submitError && <div className="text-[#D32F2F] text-[11px] uppercase tracking-widest mt-4 text-center">{submitError}</div>}
                 <div className="flex justify-center space-x-4 pt-6 opacity-50">
-                  <span className="text-[9px] tracking-widest uppercase">Stripe Secure</span>
-                  <span className="text-[9px] tracking-widest uppercase">Google Pay</span>
+                  <span className="text-[9px] tracking-widest uppercase text-[var(--color-text-secondary)]">Stripe Secure</span>
+                  <span className="text-[9px] tracking-widest uppercase text-[var(--color-text-secondary)]">Google Pay</span>
                 </div>
               </div>
             </div>
@@ -535,6 +618,11 @@ export default function App() {
             </motion.div>
           </AnimatePresence>
         </Card>
+
+        <PaymentModal 
+          isOpen={showPaymentModal} 
+          onClose={() => setShowPaymentModal(false)}
+        />
 
         {/* Navigation Buttons */}
         <div className="mt-8 flex justify-between">
@@ -548,7 +636,7 @@ export default function App() {
           </Button>
           
           {step < 4 && (
-            <Button onClick={handleNext} disabled={(step === 2 && !agreement.travelInsurance) || (step === 3 && !signatureData)}>
+            <Button onClick={handleNext}>
               Next Step <ChevronRight size={16} className="ml-1" />
             </Button>
           )}

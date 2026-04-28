@@ -20,11 +20,12 @@ service cloud.firestore {
     }
 
     function isValidTraveler(data, registrationId) {
-      return data.keys().hasAll(['registrationId', 'userId', 'name', 'passport', 'dob', 'address', 'role', 'createdAt', 'updatedAt']) &&
+      return data.keys().hasAll(['registrationId', 'userId', 'name', 'passport', 'passportExpiry', 'dob', 'address', 'role', 'createdAt', 'updatedAt']) &&
              data.registrationId == registrationId &&
              data.userId == request.auth.uid &&
              data.name is string && data.name.size() <= 100 &&
              data.passport is string && data.passport.size() <= 100 &&
+             data.passportExpiry is string && data.passportExpiry.size() <= 50 &&
              data.dob is string && data.dob.size() <= 50 &&
              data.address is string && data.address.size() <= 200 &&
              data.role is string && data.role.size() <= 100;
@@ -57,7 +58,7 @@ service cloud.firestore {
         allow create: if isSignedIn() && 
                       isValidId(registrationId) && isValidId(travelerId) && 
                       isValidTraveler(incoming(), registrationId) && 
-                      incoming().keys().size() == 9 &&
+                      incoming().keys().size() == 10 &&
                       incoming().createdAt == request.time && 
                       incoming().updatedAt == request.time &&
                       existsAfter(/databases/$(database)/documents/registrations/$(registrationId)) &&
@@ -71,7 +72,7 @@ service cloud.firestore {
                       incoming().registrationId == existing().registrationId &&
                       incoming().createdAt == existing().createdAt &&
                       incoming().updatedAt == request.time &&
-                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'passport', 'dob', 'address', 'role', 'updatedAt']);
+                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'passport', 'passportExpiry', 'dob', 'address', 'role', 'updatedAt']);
                       
         allow delete: if isSignedIn() && isValidId(registrationId) && isValidId(travelerId) && existing().userId == request.auth.uid;
       }
