@@ -232,14 +232,14 @@ export default function App() {
         return "Please confirm Travel & Luggage Responsibility in Step 2.";
     }
     if (!signatureData) {
-        return "Please provide an Authorized Executive signature in Step 3.";
+        return "Please provide an Authorized Executive signature in Step 4.";
     }
     return null;
   };
 
   const validationError = validateForm();
 
-  const handleNext = () => setStep(s => Math.min(4, s + 1));
+  const handleNext = () => setStep(s => Math.min(5, s + 1));
   const handlePrev = () => setStep(s => Math.max(1, s - 1));
 
   const addTraveler = () => {
@@ -351,9 +351,10 @@ export default function App() {
         <div className="mb-8 flex items-center justify-center space-x-2 sm:space-x-4">
           {[
             { num: 1, label: 'Delegates' },
-            { num: 2, label: 'IP Rights' },
-            { num: 3, label: 'Signature' },
-            { num: 4, label: 'Payment' }
+            { num: 2, label: 'Agreement' },
+            { num: 3, label: 'Briefing' },
+            { num: 4, label: 'Signature' },
+            { num: 5, label: 'Payment' }
           ].map((s) => (
             <React.Fragment key={s.num}>
               <div className="flex flex-col items-center">
@@ -365,7 +366,7 @@ export default function App() {
                 </div>
                 <span className="mt-2 hidden text-[9px] uppercase tracking-[0.1em] text-[var(--color-text-secondary)] sm:block">{s.label}</span>
               </div>
-              {s.num < 4 && (
+              {s.num < 5 && (
                 <div className="mb-5 h-[2px] w-8 bg-[var(--color-surface-inset)] shadow-soft-pressed sm:w-16" />
               )}
             </React.Fragment>
@@ -557,6 +558,46 @@ export default function App() {
 
           {step === 3 && (
             <div className="space-y-6">
+              <div className="border-b border-gray-300 pb-4">
+                <h2 className="text-xl font-light text-[var(--color-text-primary)]">Traveler Briefing</h2>
+                <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-1">Essential Information for Your Journey</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-5 shadow-soft-flat">
+                  <h4 className="text-[11px] font-bold uppercase text-[var(--color-text-secondary)] border-b border-gray-300 pb-2 mb-3">Packing & Cost Saving Tips</h4>
+                  <ul className="text-sm font-light text-[var(--color-text-primary)] leading-relaxed space-y-2 list-disc pl-4">
+                    <li>Pack in layers. Scandinavian weather can be unpredictable; versatile layers save space and prepare you for varying temperatures.</li>
+                    <li>Roll your clothes instead of folding to maximize luggage space and minimize wrinkles.</li>
+                    <li>Avoid heavy baggage fees by coordinating shared toiletries and bulky items within your group.</li>
+                    <li>Opt for a sturdy carry-on if possible. If checking bags, ensure you pack all essentials (chargers, medications, a change of clothes) in your personal item.</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-5 shadow-soft-flat">
+                  <h4 className="text-[11px] font-bold uppercase text-[var(--color-text-secondary)] border-b border-gray-300 pb-2 mb-3">First-Time Flyers (US to EU)</h4>
+                  <ul className="text-sm font-light text-[var(--color-text-primary)] leading-relaxed space-y-2 list-disc pl-4">
+                    <li>Bring a universal power adapter suitable for Northern Europe (Type C or Type F).</li>
+                    <li>Notify your bank of your travel dates to prevent cards from being blocked. Most places in Sweden are completely cashless.</li>
+                    <li>Stay hydrated on the flight and try to sync your sleep schedule to Central European Time (CET) a few days before departure.</li>
+                    <li>Have digital and physical copies of your passport, booking references, and this signed agreement.</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-5 shadow-soft-flat">
+                  <h4 className="text-[11px] font-bold uppercase text-[var(--color-text-secondary)] border-b border-gray-300 pb-2 mb-3">The Skåne & Copenhagen Metro Area</h4>
+                  <p className="text-sm font-light text-[var(--color-text-primary)] leading-relaxed">
+                    You'll be visiting the vibrant Øresund region, bridging southern Sweden (Skåne) and Denmark's capital (Copenhagen).
+                    The area is connected by the iconic Øresund Bridge. Trains run frequently between Malmö and Copenhagen and take about 35 minutes.
+                    Expect a highly efficient, clean, and safe metropolitan experience. English is widely spoken, so communication will be effortless.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-6">
                <div className="border-b border-gray-300 pb-4">
                 <h2 className="text-xl font-light text-[var(--color-text-primary)]">Executive Authorization</h2>
                 <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-1">Tycoon Vision Media Group Sign-off</p>
@@ -575,7 +616,7 @@ export default function App() {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div className="space-y-8">
               <div className="border-b border-gray-300 pb-4">
                 <h2 className="text-xl font-light text-[var(--color-text-primary)]">Payment & Finalization</h2>
@@ -674,7 +715,7 @@ export default function App() {
             <ChevronLeft size={16} className="mr-1" /> Back
           </Button>
           
-          {step < 4 && (
+          {step < 5 && (
             <Button onClick={handleNext}>
               Next Step <ChevronRight size={16} className="ml-1" />
             </Button>
