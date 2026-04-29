@@ -182,6 +182,8 @@ export default function App() {
     writingMechanicals: true,
     nonCompete: true,
     travelInsurance: false,
+    liabilityRelease: false,
+    travelResponsibility: false,
   });
 
   const [signatureData, setSignatureData] = React.useState<string | null>(null);
@@ -222,6 +224,12 @@ export default function App() {
     }
     if (!agreement.travelInsurance) {
         return "Please confirm Travel Insurance in Step 2.";
+    }
+    if (!agreement.liabilityRelease) {
+        return "Please confirm the Liability Release in Step 2.";
+    }
+    if (!agreement.travelResponsibility) {
+        return "Please confirm Travel & Luggage Responsibility in Step 2.";
     }
     if (!signatureData) {
         return "Please provide an Authorized Executive signature in Step 3.";
@@ -502,11 +510,45 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-gray-300 mt-6">
+                <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-5 shadow-soft-flat border border-[#D32F2F]/20">
+                   <div className="flex items-start space-x-4">
+                    <ShieldCheck className="text-[#D32F2F] mt-1 flex-shrink-0" size={16} />
+                    <div>
+                      <h4 className="text-[11px] font-bold italic text-[#D32F2F]">Liability Release & Property Damage</h4>
+                      <p className="text-xs text-[var(--color-text-primary)] mt-1 leading-relaxed">
+                        Guests hereby release our parent company, Ozone Solutions AB, from any and all liability. Guests bear full responsibility to fix or replace any property they destroy. We reserve the right to and will actively pursue restitution in court in both Sweden and the United States for any damages incurred.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-5 shadow-soft-flat border border-[#D32F2F]/20">
+                   <div className="flex items-start space-x-4">
+                    <ShieldCheck className="text-[#D32F2F] mt-1 flex-shrink-0" size={16} />
+                    <div>
+                      <h4 className="text-[11px] font-bold italic text-[#D32F2F]">Travel, Flights & Luggage</h4>
+                      <p className="text-xs text-[var(--color-text-primary)] mt-1 leading-relaxed">
+                        We are not responsible for missed flights, cancellations, or lost luggage. Guests are solely responsible for securing their own travel insurance and handling these matters independently.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-gray-300 mt-6 space-y-3">
                   <Checkbox 
                     label="Mandatory Travel Insurance Confirmed" 
                     checked={agreement.travelInsurance} 
                     onChange={e => setAgreement({...agreement, travelInsurance: e.target.checked})} 
+                  />
+                  <Checkbox 
+                    label="I accept the Liability Release & Property Damage terms" 
+                    checked={agreement.liabilityRelease} 
+                    onChange={e => setAgreement({...agreement, liabilityRelease: e.target.checked})} 
+                  />
+                  <Checkbox 
+                    label="I acknowledge sole responsibility for flights, luggage, and travel insurance" 
+                    checked={agreement.travelResponsibility} 
+                    onChange={e => setAgreement({...agreement, travelResponsibility: e.target.checked})} 
                   />
                 </div>
               </div>
@@ -530,9 +572,6 @@ export default function App() {
                 {!signatureData && <span className="absolute inset-0 flex items-center justify-center text-[10px] text-[var(--color-text-secondary)] uppercase tracking-widest italic pointer-events-none">Signature Pad</span>}
                 <div className="absolute bottom-2 left-4 text-[10px] text-[var(--color-text-secondary)] font-medium uppercase tracking-wider pointer-events-none">Authorized Executive</div>
               </div>
-              <p className="text-[10px] text-[var(--color-text-secondary)] leading-relaxed text-center">
-                This draft needs to be reviewed by legal counsel before signing.
-              </p>
             </div>
           )}
 

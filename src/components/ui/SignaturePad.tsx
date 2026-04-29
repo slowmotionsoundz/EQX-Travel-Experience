@@ -55,7 +55,7 @@ export function SignaturePadCard({ onSave, onClear }: SignatureProps) {
               className: 'w-full h-48 cursor-crosshair touch-none',
               style: { backgroundColor: 'transparent' }
             }}
-            penColor="var(--color-accent)"
+            penColor="#0C6B70"
             onEnd={handleEnd}
           />
         </motion.div>
