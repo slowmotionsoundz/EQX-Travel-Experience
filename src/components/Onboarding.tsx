@@ -17,7 +17,7 @@ export function Onboarding({ onStart }: { onStart: () => void }) {
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
       {/* Header Snippet */}
-      <div className="text-center space-y-3 mb-10">
+      <div className="text-center space-y-3 mb-8">
         <div className="inline-flex items-center justify-center p-3 rounded-full bg-[var(--color-surface-inset)] shadow-soft-pressed text-[var(--color-accent)] mb-2">
           <Shield size={24} />
         </div>
@@ -25,6 +25,23 @@ export function Onboarding({ onStart }: { onStart: () => void }) {
         <p className="text-[11px] text-[var(--color-text-secondary)] uppercase tracking-widest">
           Essential details for Tycoon Vision delegates
         </p>
+      </div>
+
+      <div className="w-full h-48 sm:h-64 mb-8 rounded-[24px] overflow-hidden shadow-soft-pressed relative">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
+        <div className="absolute inset-0 bg-[var(--color-accent)]/30 mix-blend-multiply z-10" />
+        <img 
+          src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1200&auto=format&fit=crop" 
+          alt="Nordic Sound Experience Studio" 
+          className="w-full h-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute bottom-6 left-6 right-6 z-20 flex justify-between items-end">
+          <div>
+            <span className="px-2 py-1 bg-black/40 backdrop-blur-md rounded-md text-[9px] uppercase tracking-widest text-white/80 mb-2 inline-block">Destination</span>
+            <h3 className="text-xl text-white font-light tracking-wide">EQX Studio, Landskrona</h3>
+          </div>
+        </div>
       </div>
 
       <Card className="p-0 overflow-hidden relative">

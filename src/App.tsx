@@ -373,6 +373,39 @@ export default function App() {
           ))}
         </div>
 
+        {/* Step Image Header */}
+        <div className="w-full h-32 sm:h-48 mb-8 rounded-[24px] overflow-hidden shadow-soft-pressed relative">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10" />
+          <div className="absolute inset-0 bg-[var(--color-accent)]/20 mix-blend-multiply z-10" />
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={step}
+              initial={{ opacity: 0, scale: 1.05 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              src={[
+                "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?q=80&w=1200&auto=format&fit=crop", // Step 1
+                "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=1200&auto=format&fit=crop", // Step 2 (Agreement)
+                "https://images.unsplash.com/photo-1541336032412-2048a678540d?q=80&w=1200&auto=format&fit=crop", // Step 3 (Briefing)
+                "https://images.unsplash.com/photo-1583508915901-b5f84c1dcde1?q=80&w=1200&auto=format&fit=crop", // Step 4 (Signature)
+                "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=1200&auto=format&fit=crop", // Step 5 (Payment)
+              ][step - 1]}
+              alt={`Step ${step} Context`}
+              className="w-full h-full object-cover absolute inset-0"
+              referrerPolicy="no-referrer"
+            />
+          </AnimatePresence>
+          <div className="absolute bottom-4 left-6 z-20 flex flex-col pointer-events-none">
+            <span className="text-[9px] uppercase tracking-widest text-[#0C6B70] font-bold bg-[#DCE8E8] px-2 py-0.5 rounded shadow-sm self-start mb-1">
+              Step 0{step}
+            </span>
+            <h3 className="text-white text-lg font-light tracking-wide">
+              {['Passenger Details', 'Joint Venture Agreement', 'Traveler Briefing', 'Executive Authorization', 'Secure Payment'][step - 1]}
+            </h3>
+          </div>
+        </div>
+
         <Card className="min-h-[400px] overflow-hidden relative">
           <AnimatePresence mode="wait">
             <motion.div
