@@ -1,10 +1,10 @@
 {
-  "projectId": "gen-lang-client-0553628380",
-  "appId": "1:690364678943:web:3ea5189e0c01cb0cbbe62a",
-  "apiKey": "AIzaSyCUp9K0_0skTEZLIXClo2cJ_DlEwUO5B2s",
-  "authDomain": "gen-lang-client-0553628380.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-3fdbfbfd-1648-47a9-9ea0-e77b3cd32b69",
-  "storageBucket": "gen-lang-client-0553628380.firebasestorage.app",
-  "messagingSenderId": "690364678943",
-  "measurementId": ""
+  "apiKey": "AIzaSyCpFlQ-uJNJAUQbshLkpllg3Flct-FuOgE",
+  "authDomain": "eqx-travel-experience.firebaseapp.com",
+  "projectId": "eqx-travel-experience",
+  "storageBucket": "eqx-travel-experience.firebasestorage.app",
+  "messagingSenderId": "526171773175",
+  "appId": "1:526171773175:web:e59f375eb8cc65c04b1bf2",
+  "measurementId": "G-QPKNQ8VCG4",
+  "firestoreDatabaseId": "(default)"
 }
