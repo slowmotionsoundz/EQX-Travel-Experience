@@ -11,8 +11,7 @@ service cloud.firestore {
     function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
 
     function isValidRegistration(data) {
-      return data.keys().hasAll(['userId', 'totalAmount', 'status', 'createdAt', 'updatedAt']) &&
-             data.userId == request.auth.uid &&
+      return data.keys().hasAll(['totalAmount', 'status', 'createdAt', 'updatedAt']) &&
              data.totalAmount is number &&
              data.status in ['pending', 'completed'] &&
              data.get('signatureData', '') is string &&
@@ -20,61 +19,58 @@ service cloud.firestore {
     }
 
     function isValidTraveler(data, registrationId) {
-      return data.keys().hasAll(['registrationId', 'userId', 'name', 'passport', 'passportExpiry', 'dob', 'address', 'role', 'createdAt', 'updatedAt']) &&
+      return data.keys().hasAll(['registrationId', 'name', 'passport', 'passportExpiry', 'dob', 'addressLine1', 'city', 'state', 'country', 'role', 'createdAt', 'updatedAt']) &&
              data.registrationId == registrationId &&
-             data.userId == request.auth.uid &&
              data.name is string && data.name.size() <= 100 &&
              data.passport is string && data.passport.size() <= 100 &&
              data.passportExpiry is string && data.passportExpiry.size() <= 50 &&
              data.dob is string && data.dob.size() <= 50 &&
-             data.address is string && data.address.size() <= 200 &&
+             data.addressLine1 is string && data.addressLine1.size() <= 200 &&
+             data.city is string && data.city.size() <= 100 &&
+             data.state is string && data.state.size() <= 100 &&
+             data.country is string && data.country.size() <= 100 &&
              data.role is string && data.role.size() <= 100;
     }
 
     match /registrations/{registrationId} {
-      allow get: if isSignedIn() && isValidId(registrationId) && existing().userId == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow get: if isValidId(registrationId);
+      allow list: if false; // No public listing
       
-      allow create: if isSignedIn() && 
+      allow create: if
                     isValidId(registrationId) && 
                     isValidRegistration(incoming()) && 
-                    incoming().keys().size() <= 6 &&
+                    incoming().keys().size() <= 5 &&
                     incoming().createdAt == request.time && 
                     incoming().updatedAt == request.time;
                     
-      allow update: if isSignedIn() && 
+      allow update: if
                     isValidId(registrationId) && 
                     isValidRegistration(incoming()) && 
-                    existing().userId == request.auth.uid && 
-                    incoming().userId == existing().userId &&
                     incoming().createdAt == existing().createdAt &&
                     incoming().updatedAt == request.time &&
                     incoming().diff(existing()).affectedKeys().hasOnly(['status', 'totalAmount', 'signatureData', 'updatedAt']);
                     
       match /travelers/{travelerId} {
-        allow get: if isSignedIn() && isValidId(registrationId) && isValidId(travelerId) && existing().userId == request.auth.uid;
-        allow list: if isSignedIn() && isValidId(registrationId) && resource.data.userId == request.auth.uid;
+        allow get: if isValidId(registrationId) && isValidId(travelerId);
+        allow list: if isValidId(registrationId);
         
-        allow create: if isSignedIn() && 
+        allow create: if
                       isValidId(registrationId) && isValidId(travelerId) && 
                       isValidTraveler(incoming(), registrationId) && 
-                      incoming().keys().size() == 10 &&
+                      incoming().keys().size() == 12 &&
                       incoming().createdAt == request.time && 
                       incoming().updatedAt == request.time &&
-                      existsAfter(/databases/$(database)/documents/registrations/$(registrationId)) &&
-                      getAfter(/databases/$(database)/documents/registrations/$(registrationId)).data.userId == request.auth.uid;
+                      existsAfter(/databases/$(database)/documents/registrations/$(registrationId));
                       
-        allow update: if isSignedIn() && 
+        allow update: if
                       isValidId(registrationId) && isValidId(travelerId) && 
                       isValidTraveler(incoming(), registrationId) && 
-                      existing().userId == request.auth.uid &&
-                      incoming().userId == existing().userId &&
                       incoming().registrationId == existing().registrationId &&
                       incoming().createdAt == existing().createdAt &&
                       incoming().updatedAt == request.time &&
-                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'passport', 'passportExpiry', 'dob', 'address', 'role', 'updatedAt']);
+                      incoming().diff(existing()).affectedKeys().hasOnly(['name', 'passport', 'passportExpiry', 'dob', 'addressLine1', 'city', 'state', 'country', 'role', 'updatedAt']);
                       
-        allow delete: if isSignedIn() && isValidId(registrationId) && isValidId(travelerId) && existing().userId == request.auth.uid;
+        allow delete: if isValidId(registrationId) && isValidId(travelerId);
       }
     }
   }

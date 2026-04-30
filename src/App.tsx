@@ -103,7 +103,10 @@ type Traveler = {
   passport: string;
   passportExpiry: string;
   dob: string;
-  address: string;
+  addressLine1: string;
+  city: string;
+  state: string;
+  country: string;
   role: string;
 };
 
@@ -116,65 +119,29 @@ const BASE_TRAVELERS_COUNT = 5;
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 export default function App() {
-  const [user, setUser] = React.useState<any>(null);
-  const [authLoading, setAuthLoading] = React.useState(true);
-  const [view, setView] = React.useState<'onboarding' | 'registration'>('onboarding');
+  const [view, setView] = React.useState<'welcome' | 'onboarding' | 'registration'>('welcome');
   const [step, setStep] = React.useState(1);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    import('./lib/firebase').then(({ auth }) => {
-      import('firebase/auth').then(({ onAuthStateChanged }) => {
-        const unsub = onAuthStateChanged(auth, (u) => {
-          setUser(u);
-          setAuthLoading(false);
-          if (u) {
-            const savedState = localStorage.getItem(`registration_progress_${u.uid}`);
-            if (savedState) {
-              try {
-                const parsed = JSON.parse(savedState);
-                if (parsed.travelers) setTravelers(parsed.travelers);
-                if (parsed.agreement) setAgreement(parsed.agreement);
-                if (parsed.signatureData) setSignatureData(parsed.signatureData);
-                if (parsed.step) setStep(parsed.step);
-                if (parsed.payFull !== undefined) setPayFull(parsed.payFull);
-              } catch (e) {
-                console.error("Failed to parse saved progress", e);
-                if (u.displayName) {
-                  setTravelers(prev => {
-                     const newT = [...prev];
-                     if (!newT[0].name) newT[0].name = u.displayName || '';
-                     return newT;
-                  });
-                }
-              }
-            } else if (u.displayName) {
-              setTravelers(prev => {
-                 const newT = [...prev];
-                 if (!newT[0].name) newT[0].name = u.displayName || '';
-                 return newT;
-              });
-            }
-          }
-        });
-        return unsub;
-      });
-    });
+    const savedState = localStorage.getItem('registration_progress_global');
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        if (parsed.travelers) setTravelers(parsed.travelers);
+        if (parsed.agreement) setAgreement(parsed.agreement);
+        if (parsed.signatureData) setSignatureData(parsed.signatureData);
+        if (parsed.step) setStep(parsed.step);
+        if (parsed.payFull !== undefined) setPayFull(parsed.payFull);
+      } catch (e) {
+        console.error("Failed to parse saved progress", e);
+      }
+    }
   }, []);
 
-  const handleLogin = async () => {
-    try {
-      const { auth, googleProvider } = await import('./lib/firebase');
-      const { signInWithPopup } = await import('firebase/auth');
-      await signInWithPopup(auth, googleProvider);
-    } catch (e: any) {
-      alert("Login failed: " + e.message);
-    }
-  };
-
   const [travelers, setTravelers] = React.useState<Traveler[]>(
-    Array.from({ length: 5 }).map(() => ({ id: generateId(), name: '', passport: '', passportExpiry: '', dob: '', address: '', role: '' }))
+    Array.from({ length: 5 }).map(() => ({ id: generateId(), name: '', passport: '', passportExpiry: '', dob: '', addressLine1: '', city: '', state: '', country: '', role: '' }))
   );
 
   const [agreement, setAgreement] = React.useState({
@@ -192,17 +159,15 @@ export default function App() {
 
   // Save progress to local storage when state changes
   React.useEffect(() => {
-    if (user && !authLoading) {
-      const stateToSave = {
-        travelers,
-        agreement,
-        signatureData,
-        step,
-        payFull
-      };
-      localStorage.setItem(`registration_progress_${user.uid}`, JSON.stringify(stateToSave));
-    }
-  }, [user, authLoading, travelers, agreement, signatureData, step, payFull]);
+    const stateToSave = {
+      travelers,
+      agreement,
+      signatureData,
+      step,
+      payFull
+    };
+    localStorage.setItem('registration_progress_global', JSON.stringify(stateToSave));
+  }, [travelers, agreement, signatureData, step, payFull]);
 
   // Pricing calculation
   const extraSeats = Math.max(0, travelers.length - BASE_TRAVELERS_COUNT);
@@ -211,8 +176,8 @@ export default function App() {
 
   const validateForm = () => {
     for (const t of travelers) {
-      if (!t.name.trim() || !t.passport.trim() || !t.dob.trim() || !t.address.trim()) {
-        return "Please complete all required fields for travelers in Step 1.";
+      if (!t.name.trim() || !t.passport.trim() || !t.dob.trim() || !t.addressLine1.trim() || !t.city.trim() || !t.state.trim() || !t.country.trim()) {
+        return "Please complete all required fields for travelers in Step 1. (Address Line 1, City, State/Province, Country)";
       }
       const validDobFormat = /^(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])\/\d{4}$|^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
       if (!validDobFormat.test(t.dob.trim())) {
@@ -226,7 +191,7 @@ export default function App() {
         return "Please confirm Travel Insurance in Step 2.";
     }
     if (!agreement.liabilityRelease) {
-        return "Please confirm the Liability Release in Step 2.";
+        return "Please accept the Waiver & Property Damage rules in Step 2.";
     }
     if (!agreement.travelResponsibility) {
         return "Please confirm Travel & Luggage Responsibility in Step 2.";
@@ -243,7 +208,7 @@ export default function App() {
   const handlePrev = () => setStep(s => Math.max(1, s - 1));
 
   const addTraveler = () => {
-    setTravelers([...travelers, { id: generateId(), name: '', passport: '', passportExpiry: '', dob: '', address: '', role: '' }]);
+    setTravelers([...travelers, { id: generateId(), name: '', passport: '', passportExpiry: '', dob: '', addressLine1: '', city: '', state: '', country: '', role: '' }]);
   };
 
   const removeTraveler = (id: string) => {
@@ -256,7 +221,6 @@ export default function App() {
   };
 
   const handleFinalSubmit = async () => {
-    if (!user) return;
     setIsSubmitting(true);
     setSubmitError(null);
     try {
@@ -267,7 +231,6 @@ export default function App() {
       const regRef = doc(db, 'registrations', registrationId);
       
       await setDoc(regRef, {
-        userId: user.uid,
         totalAmount: totalAmountDue,
         status: 'pending',
         signatureData: signatureData || '',
@@ -279,12 +242,14 @@ export default function App() {
         const tRef = doc(collection(regRef, 'travelers'), t.id);
         return setDoc(tRef, {
           registrationId,
-          userId: user.uid,
           name: t.name,
           passport: t.passport,
           passportExpiry: t.passportExpiry,
           dob: t.dob,
-          address: t.address,
+          addressLine1: t.addressLine1,
+          city: t.city,
+          state: t.state,
+          country: t.country,
           role: t.role,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
@@ -294,7 +259,7 @@ export default function App() {
       await Promise.all(promises);
       
       // Clear saved progress on successful submission
-      localStorage.removeItem(`registration_progress_${user.uid}`);
+      localStorage.removeItem('registration_progress_global');
     } catch (error: any) {
       console.error(error);
       
@@ -310,21 +275,26 @@ export default function App() {
     }
   };
 
-  if (authLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-base)] text-[var(--color-text-primary)]">Loading session...</div>;
-  }
-
-  if (!user) {
+  if (view === 'welcome') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-base)] p-4">
-        <div className="max-w-md w-full bg-[var(--color-surface-inset)] p-8 rounded-[24px] shadow-soft-flat text-center">
-          <h1 className="text-2xl font-light tracking-tight text-[var(--color-text-primary)] mb-2">Nordic Sound Experience</h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-8">Please sign in to access the Joint Venture Portal</p>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-base)] p-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-bg-base)] via-[var(--color-surface-base)] to-[var(--color-surface-inset)]" />
+        
+        <div className="max-w-md w-full bg-[var(--color-surface-inset)] p-10 rounded-[32px] shadow-soft-flat text-center border border-[var(--color-surface-base)] relative z-10">
+          <div className="mx-auto w-16 h-16 bg-[var(--color-bg-base)] rounded-full flex items-center justify-center mb-6 shadow-inner">
+            <ShieldCheck size={28} className="text-[var(--color-accent)]" />
+          </div>
+          
+          <h1 className="text-3xl font-light tracking-tight text-[var(--color-text-primary)] mb-3">Nordic Sound Experience</h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-10 leading-relaxed font-light">
+            Welcome to the Booking Portal. Continue to view the trip details and secure your booking.
+          </p>
+          
           <button 
-            onClick={handleLogin}
-            className="flex items-center justify-center w-full h-12 bg-[var(--color-accent)] text-white rounded-[12px] font-medium shadow-soft-raised hover:bg-opacity-90 transition-all"
+            onClick={() => setView('onboarding')}
+            className="flex items-center justify-center w-full h-14 bg-[var(--color-accent)] text-white rounded-[16px] font-semibold text-sm tracking-widest uppercase shadow-soft-raised hover:bg-opacity-90 hover:scale-[1.02] transition-all duration-200"
           >
-            Continue with Google
+            Enter Portal <ChevronRight size={18} className="ml-2" />
           </button>
         </div>
       </div>
@@ -337,7 +307,7 @@ export default function App() {
       {/* Header */}
         <div className="flex justify-between items-end border-b border-gray-300 pb-6 mb-8 text-left">
         <div>
-          <h1 className="text-xs tracking-[0.4em] uppercase text-[var(--color-text-secondary)] font-semibold mb-1">Joint Venture Portal</h1>
+          <h1 className="text-xs tracking-[0.4em] uppercase text-[var(--color-text-secondary)] font-semibold mb-1">Booking Portal</h1>
           <h2 className="text-3xl font-light tracking-tight text-[var(--color-text-primary)]">EQ Labs Europe <span className="text-[var(--color-text-secondary)] mx-2">/</span> Tycoon Vision</h2>
         </div>
       </div>
@@ -350,9 +320,9 @@ export default function App() {
         {/* Progress Bar (Stepper) */}
         <div className="mb-8 flex items-center justify-center space-x-2 sm:space-x-4">
           {[
-            { num: 1, label: 'Delegates' },
+            { num: 1, label: 'Travelers' },
             { num: 2, label: 'Agreement' },
-            { num: 3, label: 'Briefing' },
+            { num: 3, label: 'Details' },
             { num: 4, label: 'Signature' },
             { num: 5, label: 'Payment' }
           ].map((s) => (
@@ -401,7 +371,7 @@ export default function App() {
               Step 0{step}
             </span>
             <h3 className="text-white text-lg font-light tracking-wide">
-              {['Passenger Details', 'Joint Venture Agreement', 'Traveler Briefing', 'Executive Authorization', 'Secure Payment'][step - 1]}
+              {['Traveler Info', 'Trip Agreement', 'Trip Details', 'Signature', 'Payment'][step - 1]}
             </h3>
           </div>
         </div>
@@ -419,7 +389,7 @@ export default function App() {
                 <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-gray-300 pb-4">
                 <div>
-                  <h2 className="text-xl font-light text-[var(--color-text-primary)]">Traveler Registration</h2>
+                  <h2 className="text-xl font-light text-[var(--color-text-primary)]">Traveler Info</h2>
                   <p className="text-[11px] text-[var(--color-text-secondary)] mt-1 uppercase tracking-widest">Base package includes up to 5 seats.</p>
                 </div>
                 <div className="text-right">
@@ -472,7 +442,7 @@ export default function App() {
                         </select>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 pt-2 border-t border-[var(--color-bg-base)]">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2 border-t border-[var(--color-bg-base)]">
                       <DatePicker 
                         label="Passport Expiry (Optional)" 
                         date={traveler.passportExpiry} 
@@ -483,12 +453,34 @@ export default function App() {
                         date={traveler.dob} 
                         setDate={(date) => updateTraveler(traveler.id, 'dob', date)} 
                       />
-                      <Input 
-                        label="Home Address" 
-                        placeholder="123 Main St, City, Country" 
-                        value={traveler.address} 
-                        onChange={e => updateTraveler(traveler.id, 'address', e.target.value)} 
-                      />
+                    </div>
+                    <div className="pt-2">
+                       <Input 
+                         label="Address Line 1" 
+                         placeholder="123 Main St" 
+                         value={traveler.addressLine1} 
+                         onChange={e => updateTraveler(traveler.id, 'addressLine1', e.target.value)} 
+                       />
+                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mt-4">
+                         <Input 
+                           label="City" 
+                           placeholder="City" 
+                           value={traveler.city} 
+                           onChange={e => updateTraveler(traveler.id, 'city', e.target.value)} 
+                         />
+                         <Input 
+                           label="State/Province" 
+                           placeholder="State" 
+                           value={traveler.state} 
+                           onChange={e => updateTraveler(traveler.id, 'state', e.target.value)} 
+                         />
+                         <Input 
+                           label="Country" 
+                           placeholder="Country" 
+                           value={traveler.country} 
+                           onChange={e => updateTraveler(traveler.id, 'country', e.target.value)} 
+                         />
+                       </div>
                     </div>
                   </div>
                 ))}
@@ -503,8 +495,8 @@ export default function App() {
           {step === 2 && (
             <div className="space-y-6">
               <div className="border-b border-gray-300 pb-4">
-                <h2 className="text-xl font-light text-[var(--color-text-primary)]">Joint Venture Agreement</h2>
-                <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-1">IP Rights & Compliance</p>
+                <h2 className="text-xl font-light text-[var(--color-text-primary)]">Trip Agreement</h2>
+                <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-1">Rules and Info</p>
               </div>
 
               <div className="space-y-4">
@@ -512,9 +504,9 @@ export default function App() {
                   <div className="flex items-start space-x-4">
                     <ShieldCheck className="text-[var(--color-accent)] mt-1 flex-shrink-0" size={16} />
                     <div>
-                      <h4 className="text-[10px] font-bold uppercase text-[var(--color-text-secondary)]">Production Credit Split</h4>
+                      <h4 className="text-[10px] font-bold uppercase text-[var(--color-text-secondary)]">Credit Split</h4>
                       <p className="text-sm font-light text-[var(--color-text-primary)] mt-1 leading-relaxed">
-                        It is understood that all production credits associated with the joint venture will be split 50/50 between EQ Labs Europe and Tycoon Vision Media Group.
+                        All production credits from this trip will be split 50/50 between EQ Labs Europe and Tycoon Vision Media Group.
                       </p>
                     </div>
                   </div>
@@ -524,9 +516,9 @@ export default function App() {
                    <div className="flex items-start space-x-4">
                     <PenTool className="text-[var(--color-accent)] mt-1 flex-shrink-0" size={16} />
                     <div>
-                      <h4 className="text-[10px] font-bold uppercase text-[var(--color-text-secondary)]">Writing & Mechanicals</h4>
+                      <h4 className="text-[10px] font-bold uppercase text-[var(--color-text-secondary)]">Writing & Royalties</h4>
                       <p className="text-sm font-light text-[var(--color-text-primary)] mt-1 leading-relaxed">
-                        Royalties generated from writing and mechanicals shall be distributed equally (50%) to both participating entities.
+                        Royalties from writing and mechanicals will be shared equally (50%) between both parties.
                       </p>
                     </div>
                   </div>
@@ -536,9 +528,9 @@ export default function App() {
                    <div className="flex items-start space-x-4">
                     <ShieldCheck className="text-[var(--color-accent)] mt-1 flex-shrink-0" size={16} />
                     <div>
-                      <h4 className="text-[11px] font-bold italic text-[var(--color-text-secondary)]">12-Month Non-Compete Clause</h4>
+                      <h4 className="text-[11px] font-bold italic text-[var(--color-text-secondary)]">12-Month Non-Compete</h4>
                       <p className="text-xs text-[var(--color-text-primary)] mt-1 leading-relaxed">
-                        A non-compete clause extending 12 months post-project completion prevents direct competition in the specified European verticals.
+                        You agree not to directly compete in the specified European areas for 12 months after the trip.
                       </p>
                     </div>
                   </div>
@@ -548,9 +540,9 @@ export default function App() {
                    <div className="flex items-start space-x-4">
                     <ShieldCheck className="text-[#D32F2F] mt-1 flex-shrink-0" size={16} />
                     <div>
-                      <h4 className="text-[11px] font-bold italic text-[#D32F2F]">Liability Release & Property Damage</h4>
+                      <h4 className="text-[11px] font-bold italic text-[#D32F2F]">Waiver & Property Damage</h4>
                       <p className="text-xs text-[var(--color-text-primary)] mt-1 leading-relaxed">
-                        Guests hereby release our parent company, Ozone Solutions AB, from any and all liability. Guests bear full responsibility to fix or replace any property they destroy. We reserve the right to and will actively pursue restitution in court in both Sweden and the United States for any damages incurred.
+                        You agree not to hold our parent company, Ozone Solutions AB, responsible for any damages or injuries. You are responsible for fixing or replacing anything you damage. We will pursue payment for damages if necessary.
                       </p>
                     </div>
                   </div>
@@ -575,7 +567,7 @@ export default function App() {
                     onChange={e => setAgreement({...agreement, travelInsurance: e.target.checked})} 
                   />
                   <Checkbox 
-                    label="I accept the Liability Release & Property Damage terms" 
+                    label="I accept the Waiver & Property Damage rules" 
                     checked={agreement.liabilityRelease} 
                     onChange={e => setAgreement({...agreement, liabilityRelease: e.target.checked})} 
                   />
@@ -592,7 +584,7 @@ export default function App() {
           {step === 3 && (
             <div className="space-y-6">
               <div className="border-b border-gray-300 pb-4">
-                <h2 className="text-xl font-light text-[var(--color-text-primary)]">Traveler Briefing</h2>
+                <h2 className="text-xl font-light text-[var(--color-text-primary)]">Trip Details</h2>
                 <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-1">Essential Information for Your Journey</p>
               </div>
 
@@ -632,8 +624,8 @@ export default function App() {
           {step === 4 && (
             <div className="space-y-6">
                <div className="border-b border-gray-300 pb-4">
-                <h2 className="text-xl font-light text-[var(--color-text-primary)]">Executive Authorization</h2>
-                <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-1">Tycoon Vision Media Group Sign-off</p>
+                <h2 className="text-xl font-light text-[var(--color-text-primary)]">Signature</h2>
+                <p className="text-[11px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-1">Sign below to accept</p>
               </div>
               
               <div className="rounded-[16px] bg-[var(--color-surface-inset)] shadow-soft-pressed relative">

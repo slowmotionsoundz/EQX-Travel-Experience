@@ -9,7 +9,7 @@ export function Onboarding({ onStart }: { onStart: () => void }) {
   const [activeTab, setActiveTab] = useState('scope');
 
   const tabs = [
-    { id: 'scope', label: 'Project Scope', icon: Target },
+    { id: 'scope', label: 'Trip Plan', icon: Target },
     { id: 'itinerary', label: 'Itinerary', icon: MapPin },
     { id: 'value', label: 'Value & Cost', icon: Wallet },
   ];
@@ -21,9 +21,9 @@ export function Onboarding({ onStart }: { onStart: () => void }) {
         <div className="inline-flex items-center justify-center p-3 rounded-full bg-[var(--color-surface-inset)] shadow-soft-pressed text-[var(--color-accent)] mb-2">
           <Shield size={24} />
         </div>
-        <h2 className="text-2xl font-light text-[var(--color-text-primary)]">Executive Briefing</h2>
+        <h2 className="text-2xl font-light text-[var(--color-text-primary)]">Welcome Guide</h2>
         <p className="text-[11px] text-[var(--color-text-secondary)] uppercase tracking-widest">
-          Essential details for Tycoon Vision delegates
+          Essential details for Tycoon Vision travelers
         </p>
       </div>
 
@@ -85,7 +85,7 @@ export function Onboarding({ onStart }: { onStart: () => void }) {
                   <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">Nordic Sound Experience (NSE)</h3>
                   <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
                     A guided, all-in package that pairs professional studio time with a genuine cultural experience. 
-                    Designed to remove every logistical obstacle so your team can focus exclusively on making great music.
+                    Designed to remove every travel hassle so your team can focus exclusively on making great music.
                   </p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
@@ -95,7 +95,7 @@ export function Onboarding({ onStart }: { onStart: () => void }) {
                     </div>
                     <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-5 shadow-soft-pressed">
                       <div className="text-[10px] uppercase tracking-widest text-[var(--color-text-secondary)] mb-2">Secondary Goal</div>
-                      <div className="text-sm text-[var(--color-text-primary)] font-medium">BTS content creation, cultural immersion, and local DJ events.</div>
+                      <div className="text-sm text-[var(--color-text-primary)] font-medium">Behind-the-scenes recording, hitting the town, and local DJ events.</div>
                     </div>
                   </div>
                 </div>
@@ -127,7 +127,7 @@ export function Onboarding({ onStart }: { onStart: () => void }) {
               {activeTab === 'value' && (
                 <div className="space-y-6">
                   <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-6 shadow-soft-flat border-l-4 border-[var(--color-accent)]">
-                    <h3 className="text-sm font-bold text-[var(--color-text-primary)] uppercase tracking-wider mb-4">Strategic Partner Pricing</h3>
+                    <h3 className="text-sm font-bold text-[var(--color-text-primary)] uppercase tracking-wider mb-4">Special Pricing</h3>
                     
                     <div className="space-y-4">
                       <div className="flex justify-between items-end border-b border-gray-300 pb-2">
@@ -137,8 +137,8 @@ export function Onboarding({ onStart }: { onStart: () => void }) {
                       
                       <div className="flex justify-between items-end border-b border-gray-300 pb-2">
                         <div className="flex flex-col">
-                          <span className="text-xs text-[var(--color-text-primary)] font-medium">EQ Labs Joint Venture Base (5 Travelers)</span>
-                          <span className="text-[10px] text-[var(--color-text-secondary)] uppercase tracking-widest mt-1">Flights, accommodation & meals modeled separate</span>
+                          <span className="text-xs text-[var(--color-text-primary)] font-medium">EQ Labs Trip Booking (5 Travelers)</span>
+                          <span className="text-[10px] text-[var(--color-text-secondary)] uppercase tracking-widest mt-1">Flights, accommodation & meals not included</span>
                         </div>
                         <span className="text-lg font-mono text-[var(--color-text-primary)]">$5,500.00</span>
                       </div>
@@ -146,10 +146,10 @@ export function Onboarding({ onStart }: { onStart: () => void }) {
                       <div className="pt-2">
                          <div className="flex items-start space-x-3 bg-[var(--color-bg-base)] p-4 rounded-[12px] shadow-soft-pressed">
                           <CheckCircle2 className="text-[var(--color-accent)] mt-0.5" size={16} />
-                          <div>
-                            <span className="text-xs font-bold text-[var(--color-text-primary)] block mb-1">Value-Add & Subsidized Logistics</span>
+                           <div>
+                            <span className="text-xs font-bold text-[var(--color-text-primary)] block mb-1">Included Extras</span>
                             <span className="text-[11px] text-[var(--color-text-secondary)] leading-relaxed">
-                              As an exclusive partner benefit, EQX Studio time (a $1,000 baseline value) is fully bundled. Included regional toll logistics and ground coordination ensure a frictionless experience.
+                              You get EQX Studio time (a $1,000 value) included for free. We also include local toll fees and ground transport so you can focus on the music.
                             </span>
                           </div>
                         </div>
@@ -164,7 +164,7 @@ export function Onboarding({ onStart }: { onStart: () => void }) {
         
         <div className="p-6 bg-[var(--color-surface-inset)] border-t border-gray-300 mt-4 flex justify-end">
           <Button onClick={onStart} className="w-full sm:w-auto px-8">
-            Complete Registration <ArrowRight size={16} className="ml-2" />
+            Start Booking <ArrowRight size={16} className="ml-2" />
           </Button>
         </div>
       </Card>
