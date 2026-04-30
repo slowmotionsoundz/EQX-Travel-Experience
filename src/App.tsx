@@ -151,6 +151,7 @@ export default function App() {
     travelInsurance: false,
     liabilityRelease: false,
     travelResponsibility: false,
+    cancellationInsurance: false,
   });
 
   const [signatureData, setSignatureData] = React.useState<string | null>(null);
@@ -171,8 +172,9 @@ export default function App() {
 
   // Pricing calculation
   const extraSeats = Math.max(0, travelers.length - BASE_TRAVELERS_COUNT);
-  const totalPrice = INITIAL_BASE_PRICE + (extraSeats * EXTRA_SEAT_PRICE);
-  const totalAmountDue = payFull ? totalPrice : DEPOSIT_PRICE;
+  const insuranceCost = agreement.cancellationInsurance ? travelers.length * 200 : 0;
+  const totalPrice = INITIAL_BASE_PRICE + (extraSeats * EXTRA_SEAT_PRICE) + insuranceCost;
+  const totalAmountDue = payFull ? totalPrice : DEPOSIT_PRICE + insuranceCost;
 
   const validateForm = () => {
     for (const t of travelers) {
@@ -560,6 +562,19 @@ export default function App() {
                   </div>
                 </div>
 
+                <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-5 shadow-soft-flat border-l-4 border-[var(--color-accent)]">
+                   <div className="flex items-start space-x-4">
+                    <ShieldCheck className="text-[var(--color-accent)] mt-1 flex-shrink-0" size={16} />
+                    <div>
+                      <h4 className="text-[11px] font-bold uppercase text-[var(--color-text-secondary)]">Cancellation Policy</h4>
+                      <p className="text-xs text-[var(--color-text-primary)] mt-1 leading-relaxed">
+                        Cancellations made 14 days or more before the trip are eligible for a 50% refund. Cancellations made within 14 days are non-refundable. 
+                        You can opt in for Flight & Accommodation Cancellation Insurance below. If selected, your flights and Airbnb will be refundable according to their standard policies.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="pt-4 border-t border-gray-300 mt-6 space-y-3">
                   <Checkbox 
                     label="Mandatory Travel Insurance Confirmed" 
@@ -575,6 +590,11 @@ export default function App() {
                     label="I acknowledge sole responsibility for flights, luggage, and travel insurance" 
                     checked={agreement.travelResponsibility} 
                     onChange={e => setAgreement({...agreement, travelResponsibility: e.target.checked})} 
+                  />
+                  <Checkbox 
+                    label="Add Flight & Accommodation Cancellation Insurance at $200 per traveler" 
+                    checked={agreement.cancellationInsurance} 
+                    onChange={e => setAgreement({...agreement, cancellationInsurance: e.target.checked})} 
                   />
                 </div>
               </div>
@@ -650,14 +670,20 @@ export default function App() {
 
               {/* Invoice Breakdown */}
               <div className="rounded-[16px] bg-[var(--color-surface-inset)] p-6 space-y-4 shadow-soft-flat">
-                <div className={cn("flex justify-between text-xs", extraSeats === 0 && "border-b border-gray-300 pb-3")}>
+                <div className={cn("flex justify-between text-xs", extraSeats === 0 && !agreement.cancellationInsurance && "border-b border-gray-300 pb-3")}>
                   <span className="text-[var(--color-text-secondary)]">Base Fee</span>
                   <span className="text-[var(--color-text-primary)]">${INITIAL_BASE_PRICE.toLocaleString()}.00</span>
                 </div>
                 {extraSeats > 0 && (
-                  <div className="flex justify-between text-xs border-b border-gray-300 pb-3">
+                  <div className={cn("flex justify-between text-xs", !agreement.cancellationInsurance && "border-b border-gray-300 pb-3")}>
                     <span className="text-[var(--color-text-secondary)]">Extra Seats ({extraSeats})</span>
                     <span className="text-[var(--color-text-primary)]">${(extraSeats * EXTRA_SEAT_PRICE).toLocaleString()}.00</span>
+                  </div>
+                )}
+                {agreement.cancellationInsurance && (
+                  <div className="flex justify-between text-xs border-b border-gray-300 pb-3">
+                    <span className="text-[var(--color-text-secondary)]">Cancellation Insurance (x{travelers.length})</span>
+                    <span className="text-[var(--color-text-primary)]">${(insuranceCost).toLocaleString()}.00</span>
                   </div>
                 )}
                 <div className="flex justify-between items-end pt-2">
@@ -689,7 +715,7 @@ export default function App() {
                     !payFull ? "bg-[var(--color-accent)] text-white shadow-soft-raised border-none" : "bg-[var(--color-surface-inset)] text-[var(--color-text-secondary)] shadow-soft-pressed hover:text-[var(--color-text-primary)]"
                   )}
                 >
-                  Deposit ${DEPOSIT_PRICE.toLocaleString()}
+                  Deposit ${(DEPOSIT_PRICE + insuranceCost).toLocaleString()}
                 </button>
               </div>
 
